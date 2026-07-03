@@ -23,6 +23,21 @@ export class AuthRoutes extends RoutesApp {
     this.router.post("/logout", this.userController.logout.bind(this.userController));
 
     this.router.get(
+      "/verify/:token",
+      this.userController.verifyEmail.bind(this.userController),
+    );
+
+    this.router.post(
+      "/forgot-password",
+      this.userController.forgotPassword.bind(this.userController),
+    );
+
+    this.router.post(
+      "/reset-password/:token",
+      this.userController.resetPassword.bind(this.userController),
+    );
+
+    this.router.get(
       "/",
       validateJWT,
       this.userController.getUserCredentials.bind(this.userController),

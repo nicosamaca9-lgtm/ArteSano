@@ -4,6 +4,10 @@ import { UserModel } from "../models/user";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateToken } from "../helpers/jwt";
+import { Resend } from "resend";
+import { CONFIG } from "../../config";
+
+const resend = new Resend(CONFIG.resend.apiKey);
 
 export type UserResponse = CustomResponse<User>;
 
@@ -34,18 +38,39 @@ export class UserController implements UserService<UserResponse> {
       const salt = bcrypt.genSaltSync(10);
       password = bcrypt.hashSync(password, salt);
 
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+
       const user: User = {
         name: req.body.name,
         email,
         phone,
         password,
         role: req.body.role || "client",
+        isVerified: false,
+        verificationToken,
       };
 
       const user_model = await UserModel.create({
         id: crypto.randomUUID(),
         ...user,
       });
+
+      // Send verification email
+      try {
+        await resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: email,
+          subject: "Verifica tu cuenta en ArteSano",
+          html: `
+            <h1>¡Bienvenido a ArteSano!</h1>
+            <p>Por favor verifica tu correo electrónico haciendo clic en el siguiente enlace:</p>
+            <a href="http://localhost:5173/verificar?token=${verificationToken}">Verificar mi cuenta</a>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Error al enviar el correo de verificación", emailError);
+        // We continue even if email fails, but it would be better to handle it.
+      }
 
       const token = await generateToken(user_model.id);
 
@@ -244,6 +269,106 @@ export class UserController implements UserService<UserResponse> {
         ok: false,
         error_message: "Error al eliminar el usuario",
       } as any);
+    }
+  }
+
+  public async verifyEmail(req: Request, res: Response): Promise<Response<any> | any> {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({ ok: false, error_message: "Token requerido" });
+      }
+
+      const user = await UserModel.findOne({ verificationToken: token });
+
+      if (!user) {
+        return res.status(400).json({ ok: false, error_message: "Token inválido o expirado" });
+      }
+
+      user.isVerified = true;
+      user.verificationToken = undefined;
+      await user.save();
+
+      return res.status(200).json({ ok: true, message: "Cuenta verificada exitosamente" });
+    } catch (error) {
+      console.error("Error al verificar correo", error);
+      return res.status(500).json({ ok: false, error_message: "Error al verificar la cuenta" });
+    }
+  }
+
+  public async forgotPassword(req: Request, res: Response): Promise<Response<any> | any> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ ok: false, error_message: "El correo es requerido" });
+      }
+
+      const user = await UserModel.findOne({ email });
+
+      if (!user) {
+        // Por seguridad, no revelamos si el usuario existe o no
+        return res.status(200).json({ ok: true, message: "Si el correo está registrado, recibirás un enlace de recuperación." });
+      }
+
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hora de validez
+      await user.save();
+
+      try {
+        await resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: email,
+          subject: "Recuperación de contraseña en ArteSano",
+          html: `
+            <h1>Recuperación de Contraseña</h1>
+            <p>Has solicitado restablecer tu contraseña. Haz clic en el enlace de abajo para continuar:</p>
+            <a href="http://localhost:5173/recuperar-contrasena?token=${resetToken}">Restablecer contraseña</a>
+            <p>Si no fuiste tú, puedes ignorar este correo. El enlace expira en 1 hora.</p>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Error al enviar el correo de recuperación", emailError);
+        return res.status(500).json({ ok: false, error_message: "Error al enviar el correo" });
+      }
+
+      return res.status(200).json({ ok: true, message: "Si el correo está registrado, recibirás un enlace de recuperación." });
+    } catch (error) {
+      console.error("Error en forgotPassword", error);
+      return res.status(500).json({ ok: false, error_message: "Error al procesar la solicitud" });
+    }
+  }
+
+  public async resetPassword(req: Request, res: Response): Promise<Response<any> | any> {
+    try {
+      const { token } = req.params;
+      const { newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ ok: false, error_message: "Token y nueva contraseña son requeridos" });
+      }
+
+      const user = await UserModel.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() },
+      });
+
+      if (!user) {
+        return res.status(400).json({ ok: false, error_message: "El token es inválido o ha expirado" });
+      }
+
+      const salt = bcrypt.genSaltSync(10);
+      user.password = bcrypt.hashSync(newPassword, salt);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      return res.status(200).json({ ok: true, message: "Contraseña actualizada exitosamente" });
+    } catch (error) {
+      console.error("Error en resetPassword", error);
+      return res.status(500).json({ ok: false, error_message: "Error al restablecer la contraseña" });
     }
   }
 }

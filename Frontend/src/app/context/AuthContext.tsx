@@ -6,6 +6,7 @@ interface User {
   email: string;
   phone: string;
   role: string;
+  isVerified?: boolean;
 }
 
 interface AuthContextType {
@@ -15,6 +16,10 @@ interface AuthContextType {
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  isAuthModalOpen: boolean;
+  authModalMode: 'login' | 'register' | 'forgot_password';
+  openAuthModal: (mode?: 'login' | 'register' | 'forgot_password') => void;
+  closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +27,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot_password'>('login');
+
+  const openAuthModal = (mode: 'login' | 'register' | 'forgot_password' = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+  const closeAuthModal = () => setIsAuthModalOpen(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -66,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAdmin, login, register, logout, loading, isAuthModalOpen, authModalMode, openAuthModal, closeAuthModal }}>
       {children}
     </AuthContext.Provider>
   );

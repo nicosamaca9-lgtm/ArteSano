@@ -41,6 +41,19 @@ export const UserSchema = new Schema<IUserDocument>({
     enum: ["admin", "client"],
     default: "client",
   },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+  },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
   CreatedAt: {
     type: Date,
     required: function (this: IUserDocument) {
@@ -53,7 +66,7 @@ export const UserSchema = new Schema<IUserDocument>({
     required: true,
     default: Date.now,
   },
-});
+} as any);
 
 UserSchema.method("toJSON", function () {
   const { __v, _id, password, ...data } = this.toObject();

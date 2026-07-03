@@ -8,6 +8,10 @@ export interface User {
   phone: string;
   password: string;
   role: UserRole;
+  isVerified?: boolean;
+  verificationToken?: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 export type UserRole = "admin" | "client";

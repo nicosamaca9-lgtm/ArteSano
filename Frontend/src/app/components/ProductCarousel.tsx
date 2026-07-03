@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { productService } from '../services/productService';
 import { ProductFormModal } from './ProductFormModal';
 import { ConfirmModal } from './ConfirmModal';
@@ -13,6 +14,7 @@ interface ProductCarouselProps {
 
 export function ProductCarousel({ title, products, onRefresh }: ProductCarouselProps) {
   const { isAdmin } = useAuth();
+  const { addToCart } = useCart();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   
@@ -150,7 +152,20 @@ export function ProductCarousel({ title, products, onRefresh }: ProductCarouselP
                       <span className="font-montserrat font-bold text-lg text-[#064E3B]">
                         $ {product.price}
                       </span>
-                      <button className="bg-[#064E3B] hover:bg-[#064E3B]/90 text-white font-montserrat text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-1 transition-colors">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart({ 
+                            id: product.id, 
+                            name: product.name, 
+                            price: product.price, 
+                            image: product.image,
+                            category: product.category,
+                            description: product.description 
+                          });
+                        }}
+                        className="bg-[#064E3B] hover:bg-[#064E3B]/90 text-white font-montserrat text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-1 transition-colors"
+                      >
                         Pedir <ChevronRight size={14} />
                       </button>
                     </div>

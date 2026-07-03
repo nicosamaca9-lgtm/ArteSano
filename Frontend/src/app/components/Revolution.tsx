@@ -31,9 +31,9 @@ export function Revolution() {
           </p>
           
           {/* 4. Invertimos el botón: fondo blanco y texto verde. También le añadí un hover gris claro. */}
-          <button className="bg-white hover:bg-green-400 hover:text-white text-[#064E3B] font-montserrat font-semibold text-lg px-8 py-4 rounded-full shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+          <a href="https://wa.link/kmw0ua" target="_blank" rel="noopener noreferrer" className="inline-block bg-white hover:bg-green-400 hover:text-white text-[#064E3B] font-montserrat font-semibold text-lg px-8 py-4 rounded-full shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
             Pide por WhatsApp
-          </button>
+          </a>
           
         </div>
       </div>

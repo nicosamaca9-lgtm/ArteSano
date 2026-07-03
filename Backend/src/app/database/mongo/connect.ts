@@ -9,6 +9,7 @@ export async function dbConnection() {
     mongoose.set("strictQuery", false);
     await mongoose.connect(CONFIG.db, {});
     console.log("connected to the database");
+    console.log("--> Intentando conectar a:", CONFIG.db);
   } catch (error) {
     console.log("error connecting to the database", { error });
     throw new Error("error en la base de datos");
